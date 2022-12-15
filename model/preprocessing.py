@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+import pickle
 
 from networkx.readwrite import json_graph
 from sklearn.metrics.pairwise import cosine_similarity
@@ -25,7 +26,7 @@ def cleanText(readData):
     return text
 
 
-def morp(strings):
+def morp(strings : str):
     return [w.get_first()+'다' if w.get_second() in ['VV','VA'] else w.get_first() for w in komoran.get_list(cleanText(strings)) if w.get_second() in ['NNP','NNG']]#'MAG','VA','VV','MM']]
 
 
@@ -36,21 +37,24 @@ def load_stopwords(path : str) -> List[str]:
     return data.split("\n")
 
 
-def preprocessing(stopwords_path : str):
-    with urllib.request.urlopen("https://raw.githubusercontent.com/e9t/nsmc/master/synopses.json") as url:
-        data = json.load(url)
-    df = pd.DataFrame(data)
+def tokenize(filepath : str, openwith : str) -> pd.DataFrame :    
+    if openwith == "url" :
+        with urllib.request.urlopen(filepath) as url:
+            data = json.load(url)
+            df = pd.DataFrame(data)
+    elif openwith == "csv" :
+        df = pd.read_csv(filepath)
+    
     df = df.dropna(subset=['synopsis', 'title_kr'])
     df['titlecontents'] = df.apply(lambda x:x['title_kr']+"\n"+x['synopsis'],axis=1)
     df['tokens'] = df['titlecontents'].progress_map(lambda x:morp(x))
-    stopwords = set(load_stopwords(stopwords_path))
+    stopwords = set(load_stopwords(path = '../datasets/stopwords.txt'))
     df['tokens'] = df['tokens'].map(lambda x:[w for w in x if not w in stopwords])
     return df
 
 
-def term_matrix():    
-    stopwordsFile = '../datasets/stopwords.txt'
-    df = preprocessing(stopwordsFile)
+def term_matrix(filepath, openwith) -> pd.DataFrame :     
+    df = tokenize(filepath, openwith = openwith)
     tfidf_vectorizer = TfidfVectorizer(analyzer='word',
                                     lowercase=False,
                                     tokenizer=None,
@@ -67,12 +71,19 @@ def term_matrix():
     tfidf_scores = tfidf_scores[tfidf_idx]
     tfidf_vocab = np.array(tfidf_vectorizer.get_feature_names_out())[tfidf_idx]
 
-    ##TF-IDF 기준 Term-Term Matrix
+    ##TF-IDF x cosine similarity
     tfidf_term_term_mat = cosine_similarity(tfidf_vector.T)
     tfidf_term_term_mat = pd.DataFrame(tfidf_term_term_mat,
                                        index = tfidf_vectorizer.vocabulary_,
                                        columns = tfidf_vectorizer.vocabulary_)
     return tfidf_term_term_mat
+
+if __name__ == "__main__":
+    filepath = "https://raw.githubusercontent.com/e9t/nsmc/master/synopses.json"
+    dummy = term_matrix(filepath, openwith = "url")
+    with open('../datasets/matrix/term_matrix_test.pickle', 'wb') as f:
+        pickle.dump(dummy, f, pickle.HIGHEST_PROTOCOL)
+
 
 
 df = term_matrix()
@@ -100,8 +111,6 @@ nx.draw_networkx_nodes(G, positions, node_size=20, label=True, node_color="blue"
 nx.draw_networkx_edges(G, positions, edge_color="green", alpha=0.05)
 
 G = graph
-
-
 # largest connected component
 components = nx.connected_components(G)
 largest_component = max(components, key=len)
@@ -129,6 +138,7 @@ fig, ax = plt.subplots(figsize=(20, 15))
 pos = nx.spring_layout(H, k=0.15, seed=4572321)
 node_color = [community_index[n] for n in H]
 node_size = [v * 20000 for v in centrality.values()]
+
 
 nx.draw_networkx(
     H,
@@ -166,6 +176,6 @@ ax.text(
 ax.margins(0.1, 0.05)
 fig.tight_layout()
 plt.axis("off")
-plt.savefig("savefig_default.png")
+plt.savefig("../figure/savefig_default.png")
 
 json_graph.node_link_data(H)
