@@ -46,8 +46,10 @@ def tokenize(filepath : str, openwith : str) -> pd.DataFrame :
         df = pd.read_csv(filepath)
     
     df = df.dropna(subset=['synopsis', 'title_kr'])
-    df['titlecontents'] = df.apply(lambda x:x['title_kr']+"\n"+x['synopsis'],axis=1)
-    df['tokens'] = df['titlecontents'].progress_map(lambda x:morp(x))
+    # df['titlecontents'] = df.apply(lambda x:x['title_kr']+"\n"+x['synopsis'],axis=1)
+    # df['tokens'] = df['titlecontents'].progress_map(lambda x:morp(x))
+    df['tokens'] = df.apply(lambda x:x['title_kr']+"\n"+x['synopsis'],
+                           axis=1).progress_map(lambda x:morp(x))
     stopwords = set(load_stopwords(path = '../datasets/stopwords.txt'))
     df['tokens'] = df['tokens'].map(lambda x:[w for w in x if not w in stopwords])
     return df
@@ -83,8 +85,6 @@ if __name__ == "__main__":
     dummy = term_matrix(filepath, openwith = "url")
     with open('../datasets/matrix/term_matrix_test.pickle', 'wb') as f:
         pickle.dump(dummy, f, pickle.HIGHEST_PROTOCOL)
-
-
 
 df = term_matrix()
 graph = nx.from_numpy_matrix(df.values)
