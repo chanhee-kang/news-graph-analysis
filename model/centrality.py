@@ -1,8 +1,13 @@
 from preprocessing import term_matrix
+from fa2 import ForceAtlas2
+from networkx.readwrite import json_graph
+import networkx as nx
+import matplotlib.pyplot as plt
 
-def get_network(filepath : str, openwith : str, method : str):
-    df = term_matrix(filepath, openwith = "url")
+def get_network(filepath : str, openwith : str):
+    df = term_matrix(filepath = filepath, openwith = "url")
     graph = nx.from_numpy_matrix(df.values)
+    G = graph
     
     forceatlas2 = ForceAtlas2(outboundAttractionDistribution=True,  # Dissuade hubs
                           linLogMode=False,  # NOT IMPLEMENTED
@@ -24,7 +29,6 @@ def get_network(filepath : str, openwith : str, method : str):
     positions = forceatlas2.forceatlas2_networkx_layout(G, 
                                                         pos = None, 
                                                         iterations=2000)
-    G = graph
     # largest connected component
     components = nx.connected_components(G)
     largest_component = max(components, key=len)
@@ -68,7 +72,7 @@ def get_network(filepath : str, openwith : str, method : str):
 
     # Title/legend
     font = {"color": "k", "fontweight": "bold", "fontsize": 20}
-    ax.set_title("테스트!", font)
+    ax.set_title("test!", font)
     font["color"] = "r" # Change font color for legend
 
     ax.text(
@@ -97,3 +101,5 @@ def get_network(filepath : str, openwith : str, method : str):
     json_graph.node_link_data(H)
 
 
+get_network(filepath = "https://raw.githubusercontent.com/e9t/nsmc/master/synopses.json", 
+            openwith = 'url')
