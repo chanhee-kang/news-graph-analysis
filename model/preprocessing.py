@@ -21,7 +21,7 @@ komoran = Komoran("EXP")
 tqdm.pandas()
 
 
-def cleanText(readData):
+def cleanText(readData : str) -> str :
     text = re.sub(r'[-=+,#/\?:^$.@*\"※~&%ㆍ!』\\‘|\(\)\[\]\<\>`\'…》\’\“\”\·\n\r\t■◇◆▶;\xa0]', '', readData).strip()
     return text
 
@@ -36,6 +36,9 @@ def load_stopwords(path : str) -> List[str]:
     ff.close()
     return data.split("\n")
 
+def load_stopwords(path : str) -> List[str]:
+    with open(path, "r") as f :
+        return f.split("\n")
 
 def tokenize(filepath : str, openwith : str) -> pd.DataFrame :    
     if openwith == "url" :
@@ -46,8 +49,6 @@ def tokenize(filepath : str, openwith : str) -> pd.DataFrame :
         df = pd.read_csv(filepath)
     
     df = df.dropna(subset=['synopsis', 'title_kr'])
-    # df['titlecontents'] = df.apply(lambda x:x['title_kr']+"\n"+x['synopsis'],axis=1)
-    # df['tokens'] = df['titlecontents'].progress_map(lambda x:morp(x))
     df['tokens'] = df.apply(lambda x:x['title_kr']+"\n"+x['synopsis'],
                            axis=1).progress_map(lambda x:morp(x))
     stopwords = set(load_stopwords(path = '../datasets/stopwords.txt'))
@@ -123,7 +124,7 @@ centrality = nx.betweenness_centrality(H, k=10, endpoints=True)
 lpc = nx.community.label_propagation_communities(H)
 community_index = {n: i for i, com in enumerate(lpc) for n in com}
 
-###레이아웃별로 뭐가 이쁠지 테스트 해보기!
+###레이아웃별 테스트
 layouts = {'spring': nx.spring_layout(G), 
            'spectral':nx.spectral_layout(G), 
            'shell':nx.shell_layout(G), 
